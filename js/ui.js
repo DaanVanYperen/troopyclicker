@@ -180,7 +180,8 @@ class UI {
             ) * game.getCostMultiplier();
             
             const canAfford = game.state.budget >= cost;
-            const rate = building.baseRate * count * game.getBuildingMultiplier(building.id);
+            // Show rate per building, not total rate (which would be 0 if count is 0)
+            const rate = building.baseRate * game.getBuildingMultiplier(building.id);
             
             const buildingEl = document.createElement('div');
             buildingEl.className = `building-item ${canAfford ? 'affordable' : ''}`;
@@ -204,11 +205,11 @@ class UI {
                     </div>
                     <div class="building-stat">
                         <span class="building-stat-label">Rate:</span>
-                        <span class="building-stat-value">${Utils.formatNumber(rate, game.useScientificNotation)}/s</span>
+                        <span class="building-stat-value">${Utils.formatNumber(rate, game.useScientificNotation)}/s <span style="font-size: 0.8em; opacity: 0.7;">(tickets per second per unit)</span></span>
                     </div>
                     <div class="building-stat">
                         <span class="building-stat-label">Payback:</span>
-                        <span class="building-stat-value">${payback === Infinity ? '∞' : Utils.formatTime(payback)}</span>
+                        <span class="building-stat-value">${payback === Infinity ? '∞' : Utils.formatTime(payback)} <span style="font-size: 0.8em; opacity: 0.7;">(time to break even)</span></span>
                     </div>
                 </div>
             `;
@@ -405,15 +406,21 @@ class UI {
     }
     
     buyBuilding(buildingId) {
-        game.buyBuilding(buildingId);
+        if (game.buyBuilding(buildingId)) {
+            Utils.playSound('purchase');
+        }
     }
     
     buyUpgrade(upgradeId) {
-        game.buyUpgrade(upgradeId);
+        if (game.buyUpgrade(upgradeId)) {
+            Utils.playSound('upgrade');
+        }
     }
     
     buyPrestigeNode(nodeId) {
-        game.buyPrestigeNode(nodeId);
+        if (game.buyPrestigeNode(nodeId)) {
+            Utils.playSound('upgrade');
+        }
     }
     
     handlePrestige() {

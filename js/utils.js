@@ -2,7 +2,11 @@
 class Utils {
     // Format large numbers with suffixes or scientific notation
     static formatNumber(num, useScientific = false) {
-        if (num === 0 || num === undefined || num === null || isNaN(num)) return '0';
+        // Extra safety checks to prevent undefined returns
+        if (num === undefined || num === null || isNaN(num) || typeof num !== 'number') {
+            return '0';
+        }
+        if (num === 0) return '0';
         
         if (useScientific && num >= 1e6) {
             return num.toExponential(2);
@@ -10,6 +14,11 @@ class Utils {
         
         const suffixes = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc'];
         const magnitude = Math.floor(Math.log10(Math.abs(num)) / 3);
+        
+        // Handle numbers less than 1 (magnitude < 0) 
+        if (magnitude < 0) {
+            return num.toFixed(num < 10 ? 2 : num < 100 ? 1 : 0);
+        }
         
         if (magnitude === 0) {
             return num.toFixed(num < 10 ? 2 : num < 100 ? 1 : 0);
@@ -250,5 +259,48 @@ class Utils {
         const b = Math.round(Utils.lerp(b1, b2, factor));
         
         return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    }
+    
+    // Play a simple sound effect
+    static playSound(type = 'click') {
+        try {
+            // Create audio context
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            let frequency, duration;
+            switch (type) {
+                case 'upgrade':
+                    frequency = 800; // Higher pitch for upgrades
+                    duration = 0.2;
+                    break;
+                case 'purchase':
+                    frequency = 600;
+                    duration = 0.15;
+                    break;
+                case 'click':
+                default:
+                    frequency = 400;
+                    duration = 0.1;
+                    break;
+            }
+            
+            // Create oscillator
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+        } catch (e) {
+            // Silently fail if audio not supported
+        }
     }
 }
