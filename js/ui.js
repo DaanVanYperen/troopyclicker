@@ -204,11 +204,22 @@ class UI {
     
     updateBuildingsTab() {
         const container = document.getElementById('buildings-list');
-        container.innerHTML = '';
         
-        BUILDINGS_DATA.forEach(building => {
-            if (game.state.lifetimeTickets < building.unlockAt) return;
-            
+        // Get current buildings that should be visible
+        const visibleBuildings = BUILDINGS_DATA.filter(building => 
+            game.state.lifetimeTickets >= building.unlockAt
+        );
+        
+        // Remove buildings that are no longer visible
+        const existingElements = container.querySelectorAll('.building-item');
+        existingElements.forEach(el => {
+            const buildingId = el.dataset.buildingId;
+            if (!visibleBuildings.find(b => b.id === buildingId)) {
+                el.remove();
+            }
+        });
+        
+        visibleBuildings.forEach(building => {
             const count = game.state.buildings[building.id] || 0;
             const cost = Utils.calculateBulkCost(
                 building.baseCost,
@@ -218,70 +229,148 @@ class UI {
             ) * game.getCostMultiplier();
             
             const canAfford = game.state.budget >= cost;
-            // Show rate per building, not total rate (which would be 0 if count is 0)
             const rate = building.baseRate * game.getBuildingMultiplier(building.id);
-            
-            const buildingEl = document.createElement('div');
-            buildingEl.className = `building-item ${canAfford ? 'affordable' : 'disabled'}`;
-            buildingEl.dataset.buildingId = building.id;
-            
-            // Calculate ROI and payback time
             const nextRate = building.baseRate * game.getBuildingMultiplier(building.id);
             const roi = Utils.calculateROI(cost, nextRate, game.state.ticketsPerSec);
             const payback = Utils.calculatePaybackTime(cost, nextRate);
             
-            buildingEl.innerHTML = `
-                <div class="building-header">
-                    <div class="building-name">${building.icon} ${building.name}</div>
-                    <div class="building-count">${count}</div>
-                </div>
-                <div class="building-description">${building.description}</div>
-                <div class="building-stats">
-                    <div class="building-stat">
-                        <span class="building-stat-label">Cost:</span>
-                        <span class="building-stat-value">${Utils.formatNumber(cost, game.useScientificNotation)}</span>
-                    </div>
-                    <div class="building-stat">
-                        <span class="building-stat-label">Rate:</span>
-                        <span class="building-stat-value">${Utils.formatNumber(rate, game.useScientificNotation)}/s <span style="font-size: 0.8em; opacity: 0.7;">(tickets per second per unit)</span></span>
-                    </div>
-                    <div class="building-stat">
-                        <span class="building-stat-label">Payback:</span>
-                        <span class="building-stat-value">${payback === Infinity ? '∞' : Utils.formatTime(payback)} <span style="font-size: 0.8em; opacity: 0.7;">(time to break even)</span></span>
-                    </div>
-                </div>
-            `;
+            // Find existing element or create new one
+            let buildingEl = container.querySelector(`[data-building-id="${building.id}"]`);
             
-            container.appendChild(buildingEl);
+            if (!buildingEl) {
+                // Create new element only if it doesn't exist
+                buildingEl = document.createElement('div');
+                buildingEl.className = 'building-item';
+                buildingEl.dataset.buildingId = building.id;
+                
+                buildingEl.innerHTML = `
+                    <div class="building-header">
+                        <div class="building-name">${building.icon} ${building.name}</div>
+                        <div class="building-count">0</div>
+                    </div>
+                    <div class="building-description">${building.description}</div>
+                    <div class="building-stats">
+                        <div class="building-stat">
+                            <span class="building-stat-label">Cost:</span>
+                            <span class="building-stat-value cost-value"></span>
+                        </div>
+                        <div class="building-stat">
+                            <span class="building-stat-label">Rate:</span>
+                            <span class="building-stat-value rate-value"></span>
+                        </div>
+                        <div class="building-stat">
+                            <span class="building-stat-label">Payback:</span>
+                            <span class="building-stat-value payback-value"></span>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(buildingEl);
+            }
+            
+            // Update only the dynamic content
+            const countEl = buildingEl.querySelector('.building-count');
+            const costEl = buildingEl.querySelector('.cost-value');
+            const rateEl = buildingEl.querySelector('.rate-value');
+            const paybackEl = buildingEl.querySelector('.payback-value');
+            
+            // Update affordability class
+            buildingEl.className = `building-item ${canAfford ? 'affordable' : 'disabled'}`;
+            
+            // Update dynamic text content only if changed
+            if (countEl.textContent !== count.toString()) {
+                countEl.textContent = count;
+            }
+            
+            const costText = Utils.formatNumber(cost, game.useScientificNotation);
+            if (costEl.textContent !== costText) {
+                costEl.textContent = costText;
+            }
+            
+            const rateText = `${Utils.formatNumber(rate, game.useScientificNotation)}/s `;
+            const rateWithLabel = rateText + '<span style="font-size: 0.8em; opacity: 0.7;">(tickets per second per unit)</span>';
+            if (rateEl.innerHTML !== rateWithLabel) {
+                rateEl.innerHTML = rateWithLabel;
+            }
+            
+            const paybackText = payback === Infinity ? '∞' : Utils.formatTime(payback);
+            const paybackWithLabel = paybackText + ' <span style="font-size: 0.8em; opacity: 0.7;">(time to break even)</span>';
+            if (paybackEl.innerHTML !== paybackWithLabel) {
+                paybackEl.innerHTML = paybackWithLabel;
+            }
         });
     }
     
     updateUpgradesTab() {
         const container = document.getElementById('upgrades-list');
-        container.innerHTML = '';
-        
         const availableUpgrades = getAvailableUpgrades(game.state.lifetimeTickets);
+        
+        // Remove upgrades that are no longer available
+        const existingElements = container.querySelectorAll('.upgrade-item');
+        existingElements.forEach(el => {
+            const upgradeId = el.dataset.upgradeId;
+            if (!availableUpgrades.find(u => u.id === upgradeId)) {
+                el.remove();
+            }
+        });
+        
+        if (availableUpgrades.length === 0) {
+            if (!container.querySelector('.no-upgrades-message')) {
+                container.innerHTML = '<div class="no-upgrades-message" style="color: #666; text-align: center; padding: 2rem;">No upgrades available</div>';
+            }
+            return;
+        } else {
+            // Remove "no upgrades" message if upgrades are available
+            const noUpgradesMsg = container.querySelector('.no-upgrades-message');
+            if (noUpgradesMsg) {
+                noUpgradesMsg.remove();
+            }
+        }
         
         availableUpgrades.forEach(upgrade => {
             const canAfford = game.state.budget >= upgrade.cost;
             const purchased = upgrade.purchased;
             
-            const upgradeEl = document.createElement('div');
+            // Find existing element or create new one
+            let upgradeEl = container.querySelector(`[data-upgrade-id="${upgrade.id}"]`);
+            
+            if (!upgradeEl) {
+                // Create new element only if it doesn't exist
+                upgradeEl = document.createElement('div');
+                upgradeEl.className = 'upgrade-item';
+                upgradeEl.dataset.upgradeId = upgrade.id;
+                
+                upgradeEl.innerHTML = `
+                    <div class="upgrade-name-container">
+                        <span class="upgrade-name-text">${upgrade.name}</span>
+                        <span class="upgrade-checkmark"></span>
+                    </div>
+                    <div class="upgrade-description">${upgrade.description}</div>
+                    <div class="upgrade-cost-container">
+                        <span class="upgrade-cost-text"></span>
+                    </div>
+                `;
+                
+                container.appendChild(upgradeEl);
+            }
+            
+            // Update affordability and purchased status classes
             upgradeEl.className = `upgrade-item ${canAfford && !purchased ? 'affordable' : ''} ${purchased ? 'purchased' : ''}`;
-            upgradeEl.dataset.upgradeId = upgrade.id;
             
-            upgradeEl.innerHTML = `
-                <div class="upgrade-name">${upgrade.name} ${purchased ? '✓' : ''}</div>
-                <div class="upgrade-description">${upgrade.description}</div>
-                <div class="upgrade-cost">${purchased ? 'PURCHASED' : 'Cost: ' + Utils.formatNumber(upgrade.cost, game.useScientificNotation)}</div>
-            `;
+            // Update dynamic content only if changed
+            const checkmarkEl = upgradeEl.querySelector('.upgrade-checkmark');
+            const costTextEl = upgradeEl.querySelector('.upgrade-cost-text');
             
-            container.appendChild(upgradeEl);
+            const checkmarkText = purchased ? '✓' : '';
+            if (checkmarkEl.textContent !== checkmarkText) {
+                checkmarkEl.textContent = checkmarkText;
+            }
+            
+            const costText = purchased ? 'PURCHASED' : 'Cost: ' + Utils.formatNumber(upgrade.cost, game.useScientificNotation);
+            if (costTextEl.textContent !== costText) {
+                costTextEl.textContent = costText;
+            }
         });
-        
-        if (availableUpgrades.length === 0) {
-            container.innerHTML = '<div style="color: #666; text-align: center; padding: 2rem;">No upgrades available</div>';
-        }
     }
     
     updatePrestigeTab() {
@@ -298,7 +387,15 @@ class UI {
         
         // Update prestige tree
         const container = document.getElementById('prestige-tree');
-        container.innerHTML = '';
+        
+        // Remove nodes that no longer exist (unlikely but safe)
+        const existingElements = container.querySelectorAll('.prestige-node');
+        existingElements.forEach(el => {
+            const nodeId = el.dataset.nodeId;
+            if (!game.prestigeTree.find(n => n.id === nodeId)) {
+                el.remove();
+            }
+        });
         
         game.prestigeTree.forEach(node => {
             const canAfford = game.state.clout >= node.cost;
@@ -307,20 +404,39 @@ class UI {
                 game.prestigeTree.find(n => n.id === req)?.purchased
             );
             
-            const nodeEl = document.createElement('div');
+            // Find existing element or create new one
+            let nodeEl = container.querySelector(`[data-node-id="${node.id}"]`);
+            
+            if (!nodeEl) {
+                // Create new element only if it doesn't exist
+                nodeEl = document.createElement('div');
+                nodeEl.className = 'prestige-node';
+                nodeEl.dataset.nodeId = node.id;
+                
+                nodeEl.innerHTML = `
+                    <div class="node-icon" style="font-size: 2rem; margin-bottom: 0.5rem;">${node.name.split(' ')[0]}</div>
+                    <div class="node-name" style="font-weight: 700; margin-bottom: 0.5rem;">${node.name.substring(2)}</div>
+                    <div class="node-description" style="font-size: 0.9rem; margin-bottom: 1rem; opacity: 0.8;">${node.description}</div>
+                    <div class="node-cost" style="font-weight: 600;"></div>
+                `;
+                
+                container.appendChild(nodeEl);
+            }
+            
+            // Update class for states
             nodeEl.className = `prestige-node ${canAfford && meetsRequirements && !purchased ? 'unlocked' : ''} ${purchased ? 'purchased' : ''}`;
-            nodeEl.dataset.nodeId = node.id;
             
-            nodeEl.innerHTML = `
-                <div style="font-size: 2rem; margin-bottom: 0.5rem;">${node.name.split(' ')[0]}</div>
-                <div style="font-weight: 700; margin-bottom: 0.5rem;">${node.name.substring(2)}</div>
-                <div style="font-size: 0.9rem; margin-bottom: 1rem; opacity: 0.8;">${node.description}</div>
-                <div style="font-weight: 600; color: ${purchased ? '#4fd1c7' : '#e53e3e'};">
-                    ${purchased ? 'PURCHASED' : `${node.cost} Clout`}
-                </div>
-            `;
+            // Update cost text and color
+            const costEl = nodeEl.querySelector('.node-cost');
+            const costText = purchased ? 'PURCHASED' : `${node.cost} Clout`;
+            const costColor = purchased ? '#4fd1c7' : '#e53e3e';
             
-            container.appendChild(nodeEl);
+            if (costEl.textContent !== costText) {
+                costEl.textContent = costText;
+            }
+            if (costEl.style.color !== costColor) {
+                costEl.style.color = costColor;
+            }
         });
     }
     
