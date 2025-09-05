@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Troopyclicker - Ticket Triage Tycoon</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="game-container">
+        <header class="header">
+            <h1>🎫 Troopyclicker - Ticket Triage Tycoon</h1>
+            <div class="header-stats">
+                <div class="stat">
+                    <span class="stat-label">Tickets/sec:</span>
+                    <span id="tickets-per-sec">0</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Budget:</span>
+                    <span id="budget">0</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Lifetime Tickets:</span>
+                    <span id="lifetime-tickets">0</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Clout:</span>
+                    <span id="clout">0</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- Left Panel: Main Game Area -->
+            <div class="left-panel">
+                <div class="click-area">
+                    <button id="main-click-btn" class="main-click-button">
+                        🎫 Resolve Ticket
+                    </button>
+                    <div class="click-stats">
+                        <span>+<span id="click-value">1</span> per click</span>
+                    </div>
+                </div>
+
+                <!-- Active Events Display -->
+                <div class="events-section">
+                    <h3>Active Events</h3>
+                    <div id="active-events" class="active-events"></div>
+                </div>
+
+                <!-- SLA Score -->
+                <div class="sla-section">
+                    <h3>SLA Status</h3>
+                    <div class="sla-meter">
+                        <div class="sla-bar">
+                            <div id="sla-fill" class="sla-fill" style="width: 100%"></div>
+                        </div>
+                        <span id="sla-score">100%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Buildings and Upgrades -->
+            <div class="right-panel">
+                <div class="tabs">
+                    <button class="tab active" data-tab="buildings">🏢 Staff & Tools</button>
+                    <button class="tab" data-tab="upgrades">⚡ Upgrades</button>
+                    <button class="tab" data-tab="prestige">👑 Reorg</button>
+                    <button class="tab" data-tab="achievements">🏆 Achievements</button>
+                </div>
+
+                <div id="buildings" class="tab-content active">
+                    <div class="buy-controls">
+                        <button class="buy-amount active" data-amount="1">×1</button>
+                        <button class="buy-amount" data-amount="10">×10</button>
+                        <button class="buy-amount" data-amount="100">×100</button>
+                        <button class="buy-amount" data-amount="max">Max</button>
+                    </div>
+                    <div id="buildings-list" class="buildings-list"></div>
+                </div>
+
+                <div id="upgrades" class="tab-content">
+                    <div id="upgrades-list" class="upgrades-list"></div>
+                </div>
+
+                <div id="prestige" class="tab-content">
+                    <div class="prestige-info">
+                        <h3>Department Reorganization</h3>
+                        <p>Reset your progress to gain permanent <strong>Clout</strong> and unlock powerful bonuses.</p>
+                        <div class="prestige-stats">
+                            <div>Clout on Reorg: <span id="clout-gain">0</span></div>
+                            <div>Current Clout Bonus: +<span id="clout-bonus">0</span>%</div>
+                        </div>
+                        <button id="prestige-btn" class="prestige-button" disabled>Reorganize Department</button>
+                    </div>
+                    <div id="prestige-tree" class="prestige-tree"></div>
+                </div>
+
+                <div id="achievements" class="tab-content">
+                    <div id="achievements-list" class="achievements-list"></div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Settings Panel -->
+        <div class="settings-panel">
+            <button id="settings-btn" class="settings-btn">⚙️</button>
+            <div id="settings-menu" class="settings-menu hidden">
+                <h3>Settings</h3>
+                <label>
+                    <input type="checkbox" id="scientific-notation"> Scientific notation
+                </label>
+                <label>
+                    <input type="checkbox" id="reduced-motion"> Reduced motion
+                </label>
+                <button id="save-btn">💾 Save Game</button>
+                <button id="load-btn">📁 Load Game</button>
+                <button id="reset-btn" class="danger">🗑️ Reset Game</button>
+            </div>
+        </div>
+
+        <!-- Notifications -->
+        <div id="notifications" class="notifications"></div>
+    </div>
+
+    <script src="data/buildings.js"></script>
+    <script src="data/upgrades.js"></script>
+    <script src="data/events.js"></script>
+    <script src="data/achievements.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
