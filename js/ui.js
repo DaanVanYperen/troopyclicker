@@ -185,7 +185,7 @@ class UI {
             
             const buildingEl = document.createElement('div');
             buildingEl.className = `building-item ${canAfford ? 'affordable' : ''}`;
-            buildingEl.onclick = () => this.buyBuilding(building.id);
+            buildingEl.onclick = (event) => this.buyBuilding(building.id, event);
             
             // Calculate ROI and payback time
             const nextRate = building.baseRate * game.getBuildingMultiplier(building.id);
@@ -232,7 +232,7 @@ class UI {
             upgradeEl.className = `upgrade-item ${canAfford && !purchased ? 'affordable' : ''} ${purchased ? 'purchased' : ''}`;
             
             if (!purchased) {
-                upgradeEl.onclick = () => this.buyUpgrade(upgrade.id);
+                upgradeEl.onclick = (event) => this.buyUpgrade(upgrade.id, event);
             }
             
             upgradeEl.innerHTML = `
@@ -276,7 +276,7 @@ class UI {
             nodeEl.className = `prestige-node ${canAfford && meetsRequirements && !purchased ? 'unlocked' : ''} ${purchased ? 'purchased' : ''}`;
             
             if (!purchased && canAfford && meetsRequirements) {
-                nodeEl.onclick = () => this.buyPrestigeNode(node.id);
+                nodeEl.onclick = (event) => this.buyPrestigeNode(node.id, event);
             }
             
             nodeEl.innerHTML = `
@@ -467,6 +467,91 @@ class UI {
         } else if (e.code === 'KeyA') {
             this.switchTab('achievements');
         }
+    }
+    
+    // Create material ripple effect
+    createRipple(element, event) {
+        const ripple = document.createElement('div');
+        ripple.className = 'ripple';
+        
+        const rect = element.getBoundingClientRect();
+        const size = Math.max(rect.width, rect.height);
+        const x = event.clientX - rect.left - size / 2;
+        const y = event.clientY - rect.top - size / 2;
+        
+        ripple.style.width = ripple.style.height = size + 'px';
+        ripple.style.left = x + 'px';
+        ripple.style.top = y + 'px';
+        
+        element.appendChild(ripple);
+        
+        // Remove ripple after animation
+        setTimeout(() => {
+            if (ripple.parentNode) {
+                ripple.parentNode.removeChild(ripple);
+            }
+        }, 600);
+    }
+    
+    // Animate count badge when building count changes
+    animateCountBadge(countElement) {
+        countElement.classList.add('updated');
+        setTimeout(() => {
+            countElement.classList.remove('updated');
+        }, 500);
+    }
+    
+    // Enhanced building purchase with effects
+    buyBuilding(buildingId, event) {
+        const oldCount = game.state.buildings[buildingId] || 0;
+        const success = game.buyBuilding(buildingId);
+        
+        if (success && event) {
+            // Create ripple effect
+            this.createRipple(event.currentTarget, event);
+            
+            // Play purchase sound
+            Utils.playSound('purchase');
+            
+            // Find and animate the count badge
+            const buildingElement = event.currentTarget;
+            const countElement = buildingElement.querySelector('.building-count');
+            if (countElement) {
+                this.animateCountBadge(countElement);
+            }
+        }
+        
+        return success;
+    }
+    
+    // Enhanced upgrade purchase with effects
+    buyUpgrade(upgradeId, event) {
+        const success = game.buyUpgrade(upgradeId);
+        
+        if (success && event) {
+            // Create ripple effect
+            this.createRipple(event.currentTarget, event);
+            
+            // Play purchase sound
+            Utils.playSound('upgrade');
+        }
+        
+        return success;
+    }
+    
+    // Enhanced prestige node purchase with effects
+    buyPrestigeNode(nodeId, event) {
+        const success = game.buyPrestigeNode(nodeId);
+        
+        if (success && event) {
+            // Create ripple effect
+            this.createRipple(event.currentTarget, event);
+            
+            // Play purchase sound
+            Utils.playSound('upgrade');
+        }
+        
+        return success;
     }
 }
 
