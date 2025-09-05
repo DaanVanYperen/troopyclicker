@@ -47,6 +47,9 @@ class UI {
         // Prestige button
         document.getElementById('prestige-btn').addEventListener('click', () => this.handlePrestige());
         
+        // Event delegation for dynamically created building/upgrade/prestige elements
+        this.setupEventDelegation();
+        
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => this.handleKeyboard(e));
         
@@ -56,6 +59,41 @@ class UI {
             const settingsBtn = document.getElementById('settings-btn');
             if (!settingsMenu.contains(e.target) && !settingsBtn.contains(e.target)) {
                 settingsMenu.classList.add('hidden');
+            }
+        });
+    }
+    
+    setupEventDelegation() {
+        // Use event delegation for buildings
+        document.getElementById('buildings-list').addEventListener('click', (e) => {
+            const buildingEl = e.target.closest('.building-item');
+            if (buildingEl && buildingEl.classList.contains('affordable')) {
+                e.preventDefault();
+                e.stopPropagation();
+                const buildingId = buildingEl.dataset.buildingId;
+                this.buyBuilding(buildingId, e);
+            }
+        });
+        
+        // Use event delegation for upgrades
+        document.getElementById('upgrades-list').addEventListener('click', (e) => {
+            const upgradeEl = e.target.closest('.upgrade-item');
+            if (upgradeEl && upgradeEl.classList.contains('affordable')) {
+                e.preventDefault();
+                e.stopPropagation();
+                const upgradeId = upgradeEl.dataset.upgradeId;
+                this.buyUpgrade(upgradeId, e);
+            }
+        });
+        
+        // Use event delegation for prestige nodes
+        document.getElementById('prestige-tree').addEventListener('click', (e) => {
+            const nodeEl = e.target.closest('.prestige-node');
+            if (nodeEl && nodeEl.classList.contains('unlocked')) {
+                e.preventDefault();
+                e.stopPropagation();
+                const nodeId = nodeEl.dataset.nodeId;
+                this.buyPrestigeNode(nodeId, e);
             }
         });
     }
@@ -185,9 +223,7 @@ class UI {
             
             const buildingEl = document.createElement('div');
             buildingEl.className = `building-item ${canAfford ? 'affordable' : 'disabled'}`;
-            if (canAfford) {
-                buildingEl.onclick = (event) => this.buyBuilding(building.id, event);
-            }
+            buildingEl.dataset.buildingId = building.id;
             
             // Calculate ROI and payback time
             const nextRate = building.baseRate * game.getBuildingMultiplier(building.id);
@@ -232,10 +268,7 @@ class UI {
             
             const upgradeEl = document.createElement('div');
             upgradeEl.className = `upgrade-item ${canAfford && !purchased ? 'affordable' : ''} ${purchased ? 'purchased' : ''}`;
-            
-            if (!purchased) {
-                upgradeEl.onclick = (event) => this.buyUpgrade(upgrade.id, event);
-            }
+            upgradeEl.dataset.upgradeId = upgrade.id;
             
             upgradeEl.innerHTML = `
                 <div class="upgrade-name">${upgrade.name} ${purchased ? '✓' : ''}</div>
@@ -276,10 +309,7 @@ class UI {
             
             const nodeEl = document.createElement('div');
             nodeEl.className = `prestige-node ${canAfford && meetsRequirements && !purchased ? 'unlocked' : ''} ${purchased ? 'purchased' : ''}`;
-            
-            if (!purchased && canAfford && meetsRequirements) {
-                nodeEl.onclick = (event) => this.buyPrestigeNode(node.id, event);
-            }
+            nodeEl.dataset.nodeId = node.id;
             
             nodeEl.innerHTML = `
                 <div style="font-size: 2rem; margin-bottom: 0.5rem;">${node.name.split(' ')[0]}</div>
@@ -493,17 +523,21 @@ class UI {
         const success = game.buyBuilding(buildingId);
         
         if (success && event) {
-            // Create ripple effect
-            this.createRipple(event.currentTarget, event);
+            // Find the building element (might be the target or a parent)
+            const buildingElement = event.target.closest('.building-item');
             
-            // Play purchase sound
-            Utils.playSound('purchase');
-            
-            // Find and animate the count badge
-            const buildingElement = event.currentTarget;
-            const countElement = buildingElement.querySelector('.building-count');
-            if (countElement) {
-                this.animateCountBadge(countElement);
+            if (buildingElement) {
+                // Create ripple effect
+                this.createRipple(buildingElement, event);
+                
+                // Play purchase sound
+                Utils.playSound('purchase');
+                
+                // Find and animate the count badge
+                const countElement = buildingElement.querySelector('.building-count');
+                if (countElement) {
+                    this.animateCountBadge(countElement);
+                }
             }
         }
         
@@ -515,11 +549,16 @@ class UI {
         const success = game.buyUpgrade(upgradeId);
         
         if (success && event) {
-            // Create ripple effect
-            this.createRipple(event.currentTarget, event);
+            // Find the upgrade element (might be the target or a parent)
+            const upgradeElement = event.target.closest('.upgrade-item');
             
-            // Play purchase sound
-            Utils.playSound('upgrade');
+            if (upgradeElement) {
+                // Create ripple effect
+                this.createRipple(upgradeElement, event);
+                
+                // Play purchase sound
+                Utils.playSound('upgrade');
+            }
         }
         
         return success;
@@ -530,11 +569,16 @@ class UI {
         const success = game.buyPrestigeNode(nodeId);
         
         if (success && event) {
-            // Create ripple effect
-            this.createRipple(event.currentTarget, event);
+            // Find the prestige node element (might be the target or a parent)
+            const nodeElement = event.target.closest('.prestige-node');
             
-            // Play purchase sound
-            Utils.playSound('upgrade');
+            if (nodeElement) {
+                // Create ripple effect
+                this.createRipple(nodeElement, event);
+                
+                // Play purchase sound
+                Utils.playSound('upgrade');
+            }
         }
         
         return success;
