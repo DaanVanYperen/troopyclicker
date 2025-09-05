@@ -300,7 +300,7 @@ body {
     overflow: hidden;
 }
 
-.building-item:hover {
+.building-item:hover:not(.disabled) {
     border-color: #4299e1;
     box-shadow: 0 8px 25px rgba(66, 153, 225, 0.15);
     background: #f0f8ff;
@@ -376,7 +376,7 @@ body {
     overflow: hidden;
 }
 
-.upgrade-item:hover {
+.upgrade-item:hover:not(.disabled):not(.purchased) {
     border-color: #9f7aea;
     box-shadow: 0 8px 25px rgba(159, 122, 234, 0.15);
     background: #faf5ff;

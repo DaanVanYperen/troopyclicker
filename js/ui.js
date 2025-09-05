@@ -184,8 +184,10 @@ class UI {
             const rate = building.baseRate * game.getBuildingMultiplier(building.id);
             
             const buildingEl = document.createElement('div');
-            buildingEl.className = `building-item ${canAfford ? 'affordable' : ''}`;
-            buildingEl.onclick = (event) => this.buyBuilding(building.id, event);
+            buildingEl.className = `building-item ${canAfford ? 'affordable' : 'disabled'}`;
+            if (canAfford) {
+                buildingEl.onclick = (event) => this.buyBuilding(building.id, event);
+            }
             
             // Calculate ROI and payback time
             const nextRate = building.baseRate * game.getBuildingMultiplier(building.id);
@@ -405,23 +407,7 @@ class UI {
         game.buyAmount = amount === 'max' ? 'max' : parseInt(amount);
     }
     
-    buyBuilding(buildingId) {
-        if (game.buyBuilding(buildingId)) {
-            Utils.playSound('purchase');
-        }
-    }
-    
-    buyUpgrade(upgradeId) {
-        if (game.buyUpgrade(upgradeId)) {
-            Utils.playSound('upgrade');
-        }
-    }
-    
-    buyPrestigeNode(nodeId) {
-        if (game.buyPrestigeNode(nodeId)) {
-            Utils.playSound('upgrade');
-        }
-    }
+    // These methods are replaced by enhanced versions below with proper event handling
     
     handlePrestige() {
         if (game.canPrestige()) {
