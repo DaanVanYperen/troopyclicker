@@ -300,7 +300,6 @@ body {
 
 .building-item:hover {
     border-color: #4299e1;
-    transform: translateY(-2px);
     box-shadow: 0 4px 15px rgba(66, 153, 225, 0.2);
 }
 
@@ -382,7 +381,6 @@ body {
 
 .upgrade-item:hover {
     border-color: #9f7aea;
-    transform: translateY(-2px);
     box-shadow: 0 4px 15px rgba(159, 122, 234, 0.2);
 }
 
@@ -451,7 +449,6 @@ body {
 
 .prestige-button:hover:not(:disabled) {
     background: rgba(255, 255, 255, 0.3);
-    transform: translateY(-2px);
 }
 
 .prestige-button:disabled {
@@ -486,7 +483,6 @@ body {
 }
 
 .prestige-node:hover:not(.purchased) {
-    transform: translateY(-2px);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
