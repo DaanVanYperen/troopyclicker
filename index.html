@@ -234,6 +234,62 @@
             gap: 10px;
         }
 
+        .settings-menu {
+            position: fixed;
+            bottom: 160px;
+            right: 20px;
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            display: none;
+        }
+
+        .settings-menu.show {
+            display: block;
+        }
+
+        .setting-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .setting-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .toggle {
+            position: relative;
+            width: 40px;
+            height: 20px;
+            background: #ccc;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle.active {
+            background: #007bff;
+        }
+
+        .toggle::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+
+        .toggle.active::after {
+            transform: translateX(20px);
+        }
+
         .btn {
             padding: 10px 20px;
             border: none;
@@ -406,11 +462,24 @@
         </div>
 
         <div class="controls">
+            <button class="btn btn-secondary" onclick="toggleSettings()">⚙️ Settings</button>
             <button class="btn btn-secondary" onclick="saveGame()">💾 Save</button>
             <button class="btn btn-secondary" onclick="loadGame()">📁 Load</button>
             <button class="btn btn-secondary" onclick="exportGame()">📤 Export</button>
             <button class="btn btn-secondary" onclick="importGame()">📥 Import</button>
             <button class="btn btn-danger" onclick="confirmPrestige()">⚡ Prestige</button>
+        </div>
+
+        <div id="settings-menu" class="settings-menu">
+            <h3 style="margin-bottom: 15px;">Settings</h3>
+            <div class="setting-item">
+                <span>Sound Effects:</span>
+                <div class="toggle active" id="sound-toggle" onclick="toggleSound()"></div>
+            </div>
+            <div class="setting-item">
+                <span>Auto-Save:</span>
+                <div class="toggle active" id="autosave-toggle" onclick="toggleAutoSave()"></div>
+            </div>
         </div>
     </div>
 
@@ -551,8 +620,68 @@
             }
         ];
 
+        // Sound System
+        let audioContext;
+        const sounds = {};
+
+        function initAudio() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Create simple sound effects
+                sounds.click = createSound(800, 0.1, 'square');
+                sounds.resolve = createSound(400, 0.2, 'sine');
+                sounds.purchase = createSound(600, 0.3, 'triangle');
+                sounds.notification = createSound(300, 0.4, 'sine');
+            } catch (error) {
+                console.warn('Audio not supported');
+            }
+        }
+
+        function createSound(frequency, duration, type = 'sine') {
+            return () => {
+                if (!audioContext || !gameState.settings.soundEnabled) return;
+                
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+                oscillator.type = type;
+                
+                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + duration);
+            };
+        }
+
+        function playSound(soundName) {
+            if (sounds[soundName]) {
+                sounds[soundName]();
+            }
+        }
+
         // Game Functions
         function generateTicket() {
+            // Apply tool effects
+            let shouldGenerate = true;
+            
+            // AI Chatbot deflects tickets
+            if (gameState.tools.includes('chatbot') && Math.random() < 0.3) {
+                shouldGenerate = false;
+            }
+            
+            // Proactive Monitoring prevents incidents
+            if (gameState.tools.includes('monitoring') && Math.random() < 0.25) {
+                shouldGenerate = false;
+            }
+            
+            if (!shouldGenerate) return;
+
             const type = ticketTypes[Math.floor(Math.random() * ticketTypes.length)];
             const description = type.descriptions[Math.floor(Math.random() * type.descriptions.length)];
             
@@ -583,7 +712,11 @@
             ticket.resolving = true;
             updateTicketDisplay();
 
-            const resolveTime = isManual ? ticket.resolveTime / 2 : ticket.resolveTime;
+            // Apply knowledge base effect
+            let resolveTime = isManual ? ticket.resolveTime / 2 : ticket.resolveTime;
+            if (gameState.tools.includes('knowledgeBase')) {
+                resolveTime *= 0.8; // 20% faster
+            }
 
             setTimeout(() => {
                 gameState.money += ticket.money;
@@ -594,6 +727,7 @@
                 updateUI();
                 
                 if (isManual) {
+                    playSound('resolve');
                     showNotification(`+$${ticket.money} +${ticket.satisfaction} 😊`);
                 }
             }, resolveTime);
@@ -622,6 +756,7 @@
 
                 gameState.agents.push(agent);
                 updateUI();
+                playSound('purchase');
                 showNotification(`Hired ${agent.name}!`);
             }
         }
@@ -637,6 +772,7 @@
                 gameState.money -= tool.cost;
                 gameState.tools.push(toolId);
                 updateUI();
+                playSound('purchase');
                 showNotification(`Purchased ${tool.name}!`);
             }
         }
@@ -733,7 +869,10 @@
             gameState.tickets.forEach(ticket => {
                 const ticketEl = document.createElement('div');
                 ticketEl.className = `ticket ${ticket.resolving ? 'resolving' : ''}`;
-                ticketEl.onclick = () => resolveTicket(ticket.id);
+                ticketEl.onclick = () => {
+                    playSound('click');
+                    resolveTicket(ticket.id);
+                };
 
                 const assignedAgent = gameState.agents.find(a => a.id === ticket.assignedAgent);
                 const agentInfo = assignedAgent ? `<div style="font-size: 0.8em; color: #007bff;">👤 ${assignedAgent.name}</div>` : '';
@@ -838,6 +977,8 @@
             notification.textContent = message;
             notification.classList.add('show');
             
+            playSound('notification');
+            
             setTimeout(() => {
                 notification.classList.remove('show');
             }, 3000);
@@ -877,6 +1018,7 @@
         function saveGame() {
             try {
                 localStorage.setItem('helpdeskIdle', JSON.stringify(gameState));
+                playSound('notification');
                 showNotification('Game saved!');
             } catch (error) {
                 showNotification('Failed to save game!');
@@ -889,6 +1031,8 @@
                 if (saved) {
                     Object.assign(gameState, JSON.parse(saved));
                     updateUI();
+                    updateSettingsUI();
+                    playSound('notification');
                     showNotification('Game loaded!');
                 } else {
                     showNotification('No saved game found!');
@@ -910,6 +1054,7 @@
                 a.click();
                 
                 URL.revokeObjectURL(url);
+                playSound('notification');
                 showNotification('Game exported!');
             } catch (error) {
                 showNotification('Failed to export game!');
@@ -931,6 +1076,8 @@
                         const data = JSON.parse(e.target.result);
                         Object.assign(gameState, data);
                         updateUI();
+                        updateSettingsUI();
+                        playSound('notification');
                         showNotification('Game imported!');
                     } catch (error) {
                         showNotification('Invalid save file!');
@@ -942,14 +1089,40 @@
             input.click();
         }
 
+        function toggleSettings() {
+            const menu = document.getElementById('settings-menu');
+            menu.classList.toggle('show');
+        }
+
+        function toggleSound() {
+            gameState.settings.soundEnabled = !gameState.settings.soundEnabled;
+            updateSettingsUI();
+            playSound('click');
+        }
+
+        function toggleAutoSave() {
+            gameState.settings.autoSave = !gameState.settings.autoSave;
+            updateSettingsUI();
+            playSound('click');
+        }
+
+        function updateSettingsUI() {
+            const soundToggle = document.getElementById('sound-toggle');
+            const autoSaveToggle = document.getElementById('autosave-toggle');
+            
+            soundToggle.classList.toggle('active', gameState.settings.soundEnabled);
+            autoSaveToggle.classList.toggle('active', gameState.settings.autoSave);
+        }
+
         // Game Loop
         function gameLoop() {
             const now = Date.now();
             const deltaTime = now - gameState.lastUpdate;
             gameState.lastUpdate = now;
 
-            // Generate new tickets occasionally
-            if (Math.random() < 0.02) { // 2% chance per loop
+            // Generate new tickets occasionally (balanced rate)
+            const ticketGenerationRate = Math.max(0.005, 0.02 - gameState.tickets.length * 0.003);
+            if (Math.random() < ticketGenerationRate) {
                 generateTicket();
             }
 
@@ -989,6 +1162,9 @@
 
         // Initialize game
         function initGame() {
+            // Initialize audio system
+            initAudio();
+            
             // Try to load saved game
             const saved = localStorage.getItem('helpdeskIdle');
             if (saved) {
@@ -1005,6 +1181,7 @@
             }
 
             updateUI();
+            updateSettingsUI();
             
             // Start game loop
             setInterval(gameLoop, 1000); // Run every second
